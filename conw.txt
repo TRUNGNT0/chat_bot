@@ -1,0 +1,118 @@
+```bash
+#!/bin/bash
+
+echo "========================================================"
+echo "   Google Cloud VM + Vertex AI Gemini Setup"
+echo "========================================================"
+
+# =========================
+# 1. UPDATE SYSTEM
+# =========================
+echo ""
+echo "[1/6] Updating system..."
+
+sudo apt update -y
+sudo apt install -y python3-pip curl
+
+# =========================
+# 2. INSTALL GLOUD CLI
+# =========================
+echo ""
+echo "[2/6] Installing Google Cloud CLI..."
+
+if ! command -v gcloud &> /dev/null
+then
+    curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
+
+    tar -xf google-cloud-cli-linux-x86_64.tar.gz
+
+    ./google-cloud-sdk/install.sh -q
+
+    source ~/.bashrc
+
+    export PATH=$PATH:$HOME/google-cloud-sdk/bin
+else
+    echo "gcloud already installed."
+fi
+
+# =========================
+# 3. PROJECT CONFIG
+# =========================
+echo ""
+echo "[3/6] Google Cloud Project Setup"
+
+read -p "Enter your PROJECT_ID: " PROJECT_ID
+
+if [ -z "$PROJECT_ID" ]; then
+    echo "ERROR: PROJECT_ID cannot be empty"
+    exit 1
+fi
+
+gcloud config set project $PROJECT_ID
+
+# =========================
+# 4. ENABLE VERTEX AI API
+# =========================
+echo ""
+echo "[4/6] Enabling Vertex AI API..."
+
+gcloud services enable aiplatform.googleapis.com
+
+# =========================
+# 5. INSTALL PYTHON LIBRARIES
+# =========================
+echo ""
+echo "[5/6] Installing Python libraries..."
+
+pip install --upgrade pip
+
+pip install \
+google-cloud-aiplatform \
+chromadb \
+faiss-cpu \
+pandas \
+numpy \
+fastapi \
+uvicorn
+
+# =========================
+# 6. TEST GEMINI
+# =========================
+echo ""
+echo "[6/6] Testing Gemini connection..."
+
+cat > test_gemini.py << EOF
+import vertexai
+from vertexai.generative_models import GenerativeModel
+
+PROJECT_ID = "$PROJECT_ID"
+
+vertexai.init(
+    project=PROJECT_ID,
+    location="global"
+)
+
+model = GenerativeModel("gemini-2.5-flash")
+
+response = model.generate_content(
+    "Reply ONLY with SUCCESS"
+)
+
+print(response.text)
+EOF
+
+python3 test_gemini.py
+
+echo ""
+echo "========================================================"
+echo "SETUP COMPLETED"
+echo "========================================================"
+
+echo ""
+echo "Next step:"
+echo "1. Upload your JSON news dataset"
+echo "2. Create embeddings"
+echo "3. Store vectors in ChromaDB/FAISS"
+echo "4. Build RAG retriever"
+echo "5. Connect FastAPI frontend"
+```
